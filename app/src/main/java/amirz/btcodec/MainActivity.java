@@ -1,11 +1,8 @@
 package amirz.btcodec;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.view.WindowCompat;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothCodecConfig;
@@ -21,22 +18,21 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @SuppressLint({"MissingPermission", "SetTextI18n"})
-public class MainActivity extends AppCompatActivity implements BluetoothProfile.ServiceListener {
+public class MainActivity extends Activity implements BluetoothProfile.ServiceListener {
 
     private BluetoothAdapter mAdp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_main);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 0);
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 0);
             setText("Grant permissions then re-open.");
             return;
         }
