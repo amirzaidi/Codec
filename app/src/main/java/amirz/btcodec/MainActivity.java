@@ -9,6 +9,11 @@ import android.bluetooth.BluetoothCodecConfig;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.companion.AssociationRequest;
+import android.companion.BluetoothDeviceFilter;
+import android.companion.CompanionDeviceManager;
+import android.content.Context;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -54,6 +59,34 @@ public class MainActivity extends Activity implements BluetoothProfile.ServiceLi
         }
 
         BluetoothDevice dev = devs.get(0);
+
+        CompanionDeviceManager deviceManager = (CompanionDeviceManager) getSystemService(Context.COMPANION_DEVICE_SERVICE);
+
+        if (!deviceManager.getAssociations().contains(dev.getAddress())) {
+            final AssociationRequest request = new AssociationRequest.Builder()
+                    .addDeviceFilter(new BluetoothDeviceFilter.Builder()
+                            .setAddress(dev.getAddress())
+                            .build())
+                    .setSingleDevice(true)
+                    .build();
+
+            deviceManager.associate(request, new CompanionDeviceManager.Callback() {
+                public void onDeviceFound(IntentSender chooserLauncher) {
+                    try {
+                        startIntentSenderForResult(chooserLauncher,
+                                42, null, 0, 0, 0, null);
+                    } catch (IntentSender.SendIntentException e) {
+                        Log.e("Main", "Error: " + String.valueOf(e));
+                    }
+                }
+
+                @Override
+                public void onFailure(CharSequence error) {
+                    Log.e("Main", "Failed to associate device." + " | Error: " + error);
+                }
+            }, null);
+        }
+
         String state = stateToString(a2dp.getConnectionState(dev));
 
         Log.e("Main", "Device: " + dev.getName()
@@ -77,17 +110,26 @@ public class MainActivity extends Activity implements BluetoothProfile.ServiceLi
 
         String[] txt = new String[] {
                 "Device: " + dev.getName() + "\nState: " + state,
-                ">> No change necessary.",
+                ">> No update necessary.",
                 "Old config:",
                 format(oldConfig),
                 "New config:",
                 format(setConfig),
         };
 
-        if (!setConfig.equals(oldConfig)) {
+        if (!oldConfig.equals(setConfig)) {
             Log.e("Main", "SetConfig: " + setConfig);
             a2dp.setCodecConfigPreference(dev, setConfig);
-            txt[1] = ">> Updated config.";
+
+            txt[1] = ">> Failed to update config.";
+
+            long st = System.currentTimeMillis();
+            while (System.currentTimeMillis() <= st + 5000) {
+                if (getConfig(a2dp).equals(setConfig)) {
+                    txt[1] = ">> Updated config.";
+                    break;
+                }
+            }
         }
 
         setText(txt);
