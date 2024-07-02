@@ -85,6 +85,10 @@ public class NotifService extends NotificationListenerService
                     CharSequence title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
                     CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM);
 
+                    artist = artist == null ? "" : artist;
+                    title = title == null ? "" : title;
+                    album = album == null ? "" : album;
+
                     String[] mProjection = {
                         MediaStore.Audio.Media._ID
                     };
