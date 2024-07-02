@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 public abstract class AdapterListener implements BluetoothProfile.ServiceListener {
     private static final String TAG = "AdapterListener";
 
-    private final Context mContext;
+    protected final Context mContext;
     private final BluetoothAdapter mAdp;
 
     public AdapterListener(Context context) {

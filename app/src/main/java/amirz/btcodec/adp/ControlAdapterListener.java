@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothCodecConfig;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
+import android.content.Intent;
 import android.media.session.MediaController;
 import android.os.Handler;
 import android.os.Looper;
@@ -17,6 +18,8 @@ import java.util.Objects;
 
 public class ControlAdapterListener extends AdapterListener {
     private static final String TAG = "ControlAdapterListener";
+
+    public static final String UPDATE_INTENT = "amirz.btcodec.UPDATE";
 
     private static final int RETRY_TIME = 3000;
     private static final int PLAY_DELAY = 1500;
@@ -31,6 +34,7 @@ public class ControlAdapterListener extends AdapterListener {
     }
 
     private final Handler mHandler = new Handler(Objects.requireNonNull(Looper.myLooper()));
+
     private int mRate = -1;
     private MediaController mMc;
 
@@ -52,36 +56,27 @@ public class ControlAdapterListener extends AdapterListener {
                 + " | Playing: " + a2dp.isA2dpPlaying(dev));
 
         BluetoothCodecConfig oldConfig = getConfig(a2dp, dev);
-        Log.d(TAG, "OldConfig: " + oldConfig);
-
         BluetoothCodecConfig setConfig = getBluetoothCodecConfig();
-        Log.d(TAG, "SetConfig: " + setConfig);
-
-        String[] txt = new String[] {
-                "Device: " + dev.getName() + "\nState: " + state,
-                ">> No update necessary.",
-                "Old config:",
-                format(oldConfig),
-                "New config:",
-                format(setConfig),
-        };
-
-        if (!oldConfig.equals(setConfig)) {
-            Log.d(TAG, "SetConfig: " + setConfig);
-            a2dp.setCodecConfigPreference(dev, setConfig);
-
-            txt[1] = ">> Failed to update config.";
-            long st = System.currentTimeMillis();
-            while (System.currentTimeMillis() <= st + RETRY_TIME) {
-                if (getConfig(a2dp, dev).equals(setConfig)) {
-                    txt[1] = ">> Updated config.";
-                    break;
-                }
-            }
+        if (oldConfig.equals(setConfig)) {
+            play();
+            return;
         }
 
-        Log.d(TAG, String.join("\n", txt));
-        mHandler.postDelayed(this::play, PLAY_DELAY);
+        Log.d(TAG, "OldConfig: " + oldConfig);
+        Log.d(TAG, "SetConfig: " + setConfig);
+        a2dp.setCodecConfigPreference(dev, setConfig);
+
+        long st = System.currentTimeMillis();
+        while (System.currentTimeMillis() <= st + RETRY_TIME && !getConfig(a2dp, dev).equals(setConfig)) {
+        }
+
+        if (getConfig(a2dp, dev).equals(setConfig)) {
+            Log.d(TAG, "Update success");
+            mContext.sendBroadcast(new Intent(UPDATE_INTENT));
+            mHandler.postDelayed(this::play, PLAY_DELAY);
+        } else {
+            Log.d(TAG, "Update failed");
+        }
     }
 
     public void setRate(int rate, MediaController mc) {
