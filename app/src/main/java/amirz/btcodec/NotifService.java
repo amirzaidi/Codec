@@ -10,7 +10,6 @@ import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.net.Uri;
-import android.os.Bundle;
 import android.provider.MediaStore;
 import android.service.notification.NotificationListenerService;
 import android.util.Log;
@@ -21,12 +20,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import amirz.btcodec.adp.ControlAdapterListener;
+
 public class NotifService extends NotificationListenerService
         implements MediaSessionManager.OnActiveSessionsChangedListener {
 
     private static final String TAG = "Notif";
 
-    private BPListener mListener;
+    private ControlAdapterListener mListener;
     private ComponentName mComponent;
     private MediaSessionManager mMedia;
 
@@ -38,7 +39,7 @@ public class NotifService extends NotificationListenerService
     public void onCreate() {
         super.onCreate();
         Log.e(TAG, "onCreate");
-        mListener = new BPListener(getApplicationContext());
+        mListener = new ControlAdapterListener(this);
         mMedia = getSystemService(MediaSessionManager.class);
         mComponent = new ComponentName(this, getClass());
     }
@@ -104,7 +105,7 @@ public class NotifService extends NotificationListenerService
                     ))
                     {
                         if (c == null || c.getCount() == 0) {
-                            Log.e("Notif", "onMetadataChanged no hit");
+                            Log.e(TAG, "onMetadataChanged no results");
                         } else {
                             List<Uri> uris = new ArrayList<>();
                             while (c.moveToNext()) {
@@ -120,13 +121,13 @@ public class NotifService extends NotificationListenerService
                                     mex.setDataSource(getApplicationContext(), uris.get(0), null);
                                     MediaFormat mf = mex.getTrackFormat(0);
                                     int sampleRate = mf.getInteger(MediaFormat.KEY_SAMPLE_RATE);
-                                    Log.e("Notif", "onMetadataChanged " + uris.get(0) + " " + sampleRate);
+                                    Log.d(TAG, "onMetadataChanged " + uris.get(0) + " " + sampleRate);
                                     handleSampleChange(sampleRate, mc);
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
                             } else {
-                                Log.e("Notif", "onMetadataChanged ambiguity " + uris.size());
+                                Log.e(TAG, "onMetadataChanged ambiguity " + uris.size());
                             }
                         }
                     } catch (Exception e) {
@@ -142,7 +143,7 @@ public class NotifService extends NotificationListenerService
     private void handleSampleChange(int rate, MediaController mc) {
         if (mRate != rate) {
             mRate = rate;
-            mListener.enforceRate(rate, mc);
+            mListener.setRate(rate, mc);
         }
     }
 }

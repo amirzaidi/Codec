@@ -2,4 +2,6 @@
     <string name="app_name">BT Codec</string>
     <string name="app_name_long">BT Codec Switcher</string>
     <string name="notif_service">Notification Service</string>
+    <string name="permissions_needed">Permissions needed.</string>
+    <string name="permissions_granted">Permissions granted.</string>
 </resources>
