@@ -121,15 +121,11 @@ public class NotifService extends NotificationListenerService
 
                             if (uris.size() == 1) {
                                 MediaExtractor mex = new MediaExtractor();
-                                try {
-                                    mex.setDataSource(getApplicationContext(), uris.get(0), null);
-                                    MediaFormat mf = mex.getTrackFormat(0);
-                                    int sampleRate = mf.getInteger(MediaFormat.KEY_SAMPLE_RATE);
-                                    Log.d(TAG, "onMetadataChanged " + uris.get(0) + " " + sampleRate);
-                                    handleSampleChange(sampleRate, mc);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
+                                mex.setDataSource(getApplicationContext(), uris.get(0), null);
+                                MediaFormat mf = mex.getTrackFormat(0);
+                                int sampleRate = mf.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                                Log.d(TAG, "onMetadataChanged " + uris.get(0) + " " + sampleRate);
+                                handleSampleChange(sampleRate, mc);
                             } else {
                                 Log.e(TAG, "onMetadataChanged ambiguity " + uris.size());
                             }
