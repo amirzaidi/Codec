@@ -22,7 +22,7 @@ public class ControlAdapterListener extends AdapterListener {
     public static final String UPDATE_INTENT = "amirz.btcodec.UPDATE";
 
     private static final int RETRY_TIME = 3000;
-    private static final int PLAY_DELAY = 1500;
+    private static final int PLAY_DELAY = 1250;
 
     private static final Map<Integer, Integer> sRateMap = new HashMap<>();
 
@@ -82,8 +82,12 @@ public class ControlAdapterListener extends AdapterListener {
     public void setRate(int rate, MediaController mc) {
         mRate = rate;
         mMc = mc;
-        pressButton(KeyEvent.KEYCODE_MEDIA_STOP);
+        stop();
         connectAsync();
+    }
+
+    private void stop() {
+        pressButton(KeyEvent.KEYCODE_MEDIA_STOP);
     }
 
     private void play() {
