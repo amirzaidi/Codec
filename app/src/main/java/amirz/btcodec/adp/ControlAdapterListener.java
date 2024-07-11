@@ -43,6 +43,10 @@ public class ControlAdapterListener extends AdapterListener {
         super(context);
     }
 
+    public void reset() {
+        mRate = -1;
+    }
+
     // Step 1: Pause, then become the controller of the bluetooth device.
     public void setRate(int rawRate, MediaController mc) {
         int rate = sRateMap.getOrDefault(rawRate, BluetoothCodecConfig.SAMPLE_RATE_48000);

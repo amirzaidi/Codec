@@ -86,18 +86,17 @@ public class MediaControllerCallback extends MediaController.Callback {
                     ));
                 }
 
-                if (uris.size() == 1) {
-                    MediaExtractor mex = new MediaExtractor();
-                    mex.setDataSource(mContext, uris.get(0), null);
-                    MediaFormat mf = mex.getTrackFormat(0);
-                    int sampleRate = mf.getInteger(MediaFormat.KEY_SAMPLE_RATE);
-
-                    Log.d(TAG, "onMetadataChanged " + uris.get(0) + " " + sampleRate);
-                    changeSampleRate(sampleRate);
-                } else {
+                if (uris.size() > 1) {
                     Log.e(TAG, "onMetadataChanged ambiguity " + uris.size());
-                    resetSampleRate();
                 }
+
+                MediaExtractor mex = new MediaExtractor();
+                mex.setDataSource(mContext, uris.get(0), null);
+                MediaFormat mf = mex.getTrackFormat(0);
+                int sampleRate = mf.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+
+                Log.d(TAG, "onMetadataChanged " + uris.get(0) + " " + sampleRate);
+                changeSampleRate(sampleRate);
             }
         } catch (Exception e) {
             e.printStackTrace();

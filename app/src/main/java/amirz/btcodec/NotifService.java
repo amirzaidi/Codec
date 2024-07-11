@@ -1,6 +1,8 @@
 package amirz.btcodec;
 
 import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
@@ -20,24 +22,33 @@ public class NotifService extends NotificationListenerService
     private static final String TAG = "Notif";
 
     private ControlAdapterListener mListener;
+    private BluetoothConnectReceiver mConnect;
     private ComponentName mComponent;
     private MediaSessionManager mMedia;
 
-    private final Map<MediaController, MediaController.Callback> mCbs = new HashMap<>();
+    private final Map<MediaController, MediaControllerCallback> mCbs = new HashMap<>();
 
     @Override
     public void onCreate() {
         super.onCreate();
         Log.e(TAG, "onCreate");
         mListener = new ControlAdapterListener(this);
-        mMedia = getSystemService(MediaSessionManager.class);
+        mConnect = new BluetoothConnectReceiver(this) {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.d(TAG, "onReceive " + intent.getAction());
+                mListener.reset();
+            }
+        };
         mComponent = new ComponentName(this, getClass());
+        mMedia = getSystemService(MediaSessionManager.class);
     }
 
     @Override
     public void onListenerConnected() {
         super.onListenerConnected();
         Log.e(TAG, "onListenerConnected");
+        mConnect.register();
         mMedia.addOnActiveSessionsChangedListener(this, mComponent);
         onActiveSessionsChanged(null);
     }
@@ -46,6 +57,7 @@ public class NotifService extends NotificationListenerService
     public void onListenerDisconnected() {
         super.onListenerDisconnected();
         Log.e(TAG, "onListenerDisconnected");
+        mConnect.unregister();
         mMedia.removeOnActiveSessionsChangedListener(this);
     }
 
@@ -75,8 +87,8 @@ public class NotifService extends NotificationListenerService
         // Add MCs that have been created.
         for (MediaController mc : controllers) {
             if (!mCbs.containsKey(mc)) {
-                MediaController.Callback cb = new MediaControllerCallback(
-                        getApplicationContext(), mc, mListener, this::hasExclusiveMC);
+                MediaControllerCallback cb = new MediaControllerCallback(
+                    getApplicationContext(), mc, mListener, this::hasExclusiveMC);
                 mc.registerCallback(cb);
                 mCbs.put(mc, cb);
             }
