@@ -37,22 +37,26 @@ public abstract class AdapterListener implements BluetoothProfile.ServiceListene
         List<BluetoothDevice> devs = a2dp.getConnectedDevices();
         if (devs.isEmpty()) {
             Log.e(TAG, "No device connected");
-            onBluetoothDevice(a2dp, null);
+            onConnected(a2dp, null);
         } else {
             if (devs.size() > 1) {
                 Log.e(TAG, "Ambiguity between multiple connected bluetooth devices");
             }
-            onBluetoothDevice(a2dp, devs.get(0));
+            onConnected(a2dp, devs.get(0));
         }
 
         mAdp.closeProfileProxy(BluetoothProfile.A2DP, proxy);
     }
 
-    protected abstract void onBluetoothDevice(BluetoothA2dp a2dp, BluetoothDevice dev);
+    protected abstract void onConnected(BluetoothA2dp a2dp, BluetoothDevice dev);
 
     @Override
     public void onServiceDisconnected(int profile) {
         Log.e(TAG,"onServiceDisconnected");
+        onDisconnected();
+    }
+
+    protected void onDisconnected() {
     }
 
     protected static String format(BluetoothCodecConfig config) {

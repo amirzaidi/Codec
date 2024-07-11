@@ -37,16 +37,49 @@ public class ControlAdapterListener extends AdapterListener {
 
     private int mRate = -1;
     private MediaController mMc;
+    private boolean mAsyncInProgress;
 
     public ControlAdapterListener(Context context) {
         super(context);
     }
 
-    @SuppressLint("MissingPermission")
+    // Step 1: Pause, then become the controller of the bluetooth device.
+    public void setRate(int rawRate, MediaController mc) {
+        int rate = sRateMap.getOrDefault(rawRate, BluetoothCodecConfig.SAMPLE_RATE_48000);
+        if (mRate != rate) {
+            if (mAsyncInProgress) {
+                Log.d(TAG, mc.getPackageName() + " request in progress, new request ignored");
+            } else {
+                Log.d(TAG,  mc.getPackageName() + " starting update of sample rate to " + rawRate);
+                mAsyncInProgress = true;
+                mRate = rate;
+                mMc = mc;
+                stop();
+                connectAsync();
+            }
+        }
+    }
+
+    // Step 2: Update the sample rate.
     @Override
-    protected void onBluetoothDevice(BluetoothA2dp a2dp, BluetoothDevice dev) {
+    protected void onConnected(BluetoothA2dp a2dp, BluetoothDevice dev) {
+        updateConfig(a2dp, dev);
+    }
+
+    @Override
+    protected void onDisconnected() {
+        mHandler.postDelayed(this::onAsyncComplete, PLAY_DELAY);
+    }
+
+    // Step 3: Resume, and give up control.
+    private void onAsyncComplete() {
+        play();
+        mAsyncInProgress = false;
+    }
+
+    @SuppressLint("MissingPermission")
+    private void updateConfig(BluetoothA2dp a2dp, BluetoothDevice dev) {
         if (dev == null) {
-            play();
             return;
         }
 
@@ -58,7 +91,6 @@ public class ControlAdapterListener extends AdapterListener {
         BluetoothCodecConfig oldConfig = getConfig(a2dp, dev);
         BluetoothCodecConfig setConfig = getBluetoothCodecConfig();
         if (oldConfig.equals(setConfig)) {
-            play();
             return;
         }
 
@@ -66,24 +98,16 @@ public class ControlAdapterListener extends AdapterListener {
         Log.d(TAG, "SetConfig: " + setConfig);
         a2dp.setCodecConfigPreference(dev, setConfig);
 
-        long st = System.currentTimeMillis();
-        while (System.currentTimeMillis() <= st + RETRY_TIME && !getConfig(a2dp, dev).equals(setConfig)) {
+        long stop = System.currentTimeMillis() + RETRY_TIME;
+        while (System.currentTimeMillis() <= stop && !getConfig(a2dp, dev).equals(setConfig)) {
         }
 
         if (getConfig(a2dp, dev).equals(setConfig)) {
             Log.d(TAG, "Update success");
             mContext.sendBroadcast(new Intent(UPDATE_INTENT));
-            mHandler.postDelayed(this::play, PLAY_DELAY);
         } else {
             Log.d(TAG, "Update failed");
         }
-    }
-
-    public void setRate(int rate, MediaController mc) {
-        mRate = rate;
-        mMc = mc;
-        stop();
-        connectAsync();
     }
 
     private void stop() {
@@ -102,11 +126,10 @@ public class ControlAdapterListener extends AdapterListener {
     }
 
     private BluetoothCodecConfig getBluetoothCodecConfig() {
-        int rate = sRateMap.getOrDefault(mRate, BluetoothCodecConfig.SAMPLE_RATE_48000);
         return new BluetoothCodecConfig.Builder()
                 .setCodecType(BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC)
                 .setCodecPriority(BluetoothCodecConfig.CODEC_PRIORITY_HIGHEST)
-                .setSampleRate(rate)
+                .setSampleRate(mRate)
                 .setBitsPerSample(BluetoothCodecConfig.BITS_PER_SAMPLE_24)
                 .setChannelMode(BluetoothCodecConfig.CHANNEL_MODE_STEREO)
                 .setCodecSpecific1(1000) // 1000 = Quality, 1003 = Best Effort

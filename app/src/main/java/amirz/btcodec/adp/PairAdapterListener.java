@@ -24,7 +24,7 @@ public class PairAdapterListener extends AdapterListener {
     }
 
     @Override
-    protected void onBluetoothDevice(BluetoothA2dp a2dp, BluetoothDevice dev) {
+    protected void onConnected(BluetoothA2dp a2dp, BluetoothDevice dev) {
         if (dev == null) {
             return;
         }
