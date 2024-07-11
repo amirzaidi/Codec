@@ -85,18 +85,20 @@ public class NotifService extends NotificationListenerService
                     CharSequence title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
                     CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM);
 
-                    artist = artist == null ? "" : artist;
-                    title = title == null ? "" : title;
-                    album = album == null ? "" : album;
+                    String artistString = artist == null ? "" : artist.toString();
+                    String titleString = title == null ? "" : title.toString();
+                    String albumString = album == null ? "" : album.toString();
 
                     String[] mProjection = {
                         MediaStore.Audio.Media._ID
                     };
-                    String[] artistSplit = artist.toString().split(" ");
+                    int artistSplit = artistString.lastIndexOf(' ');
                     String[] mArgs = {
-                        title.toString(),
-                        "%" + artistSplit[artistSplit.length - 1],
-                        album.toString(),
+                        titleString,
+                        artistSplit == -1 || artistSplit == artistString.length() - 1
+                            ? artistString
+                            : ("%" + artistString.substring(artistSplit + 1)),
+                        albumString,
                     };
                     try (Cursor c = getApplicationContext().getContentResolver().query(
                         MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
