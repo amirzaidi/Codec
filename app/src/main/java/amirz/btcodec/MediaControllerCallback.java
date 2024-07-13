@@ -48,9 +48,9 @@ public class MediaControllerCallback extends MediaController.Callback {
         CharSequence title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
         CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM);
 
-        String artistString = artist == null ? "" : artist.toString();
-        String titleString = title == null ? "" : title.toString();
-        String albumString = album == null ? "" : album.toString();
+        String artistString = artist == null ? "" : artist.toString().trim();
+        String titleString = title == null ? "" : title.toString().trim();
+        String albumString = album == null ? "" : album.toString().trim();
 
         String[] mProjection = {
                 MediaStore.Audio.Media._ID
@@ -59,18 +59,19 @@ public class MediaControllerCallback extends MediaController.Callback {
         int artistSplit2 = artistString.lastIndexOf(';');
         int artistSplit = artistSplit1 == -1 ? artistSplit2 : artistSplit1;
         String[] mArgs = {
-                titleString,
-                artistSplit == -1 || artistSplit == artistString.length() - 1
+                "%" + titleString + "%",
+                "%" + (artistSplit == -1 || artistSplit == artistString.length() - 1
                         ? artistString
-                        : ("%" + artistString.substring(artistSplit + 1)),
-                albumString,
+                        : artistString.substring(artistSplit + 1)) + "%",
+                "%" + albumString + "%",
         };
+        Log.d(TAG, "Search for " + mArgs[0] + " | " + mArgs[1] + " | " + mArgs[2]);
         try (Cursor c = mContext.getContentResolver().query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 mProjection,
-                MediaStore.Audio.Media.TITLE + " = ?"
+                MediaStore.Audio.Media.TITLE + " like ?"
                         + " AND " + MediaStore.Audio.Media.ARTIST + " like ?"
-                        + " AND " + MediaStore.Audio.Media.ALBUM + " = ?",
+                        + " AND " + MediaStore.Audio.Media.ALBUM + " like ?",
                 mArgs,
                 null
         )) {
