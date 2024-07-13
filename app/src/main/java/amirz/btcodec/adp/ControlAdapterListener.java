@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.media.session.MediaController;
+import android.media.session.PlaybackState;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -21,6 +22,7 @@ public class ControlAdapterListener extends AdapterListener {
 
     public static final String UPDATE_INTENT = "amirz.btcodec.UPDATE";
 
+    private static final int REWIND_THRESHOLD = 5000;
     private static final int RETRY_TIME = 3000;
     private static final int PLAY_DELAY = 1250;
 
@@ -51,14 +53,16 @@ public class ControlAdapterListener extends AdapterListener {
     public void setRate(int rawRate, MediaController mc) {
         int rate = sRateMap.getOrDefault(rawRate, BluetoothCodecConfig.SAMPLE_RATE_48000);
         if (mRate != rate) {
+            String pkg = mc.getPackageName();
             if (mAsyncInProgress) {
-                Log.d(TAG, mc.getPackageName() + " request in progress, new request ignored");
+                Log.d(TAG, pkg + " request in progress, new request ignored");
             } else {
-                Log.d(TAG,  mc.getPackageName() + " starting update of sample rate to " + rawRate);
+                Log.d(TAG,  pkg + " starting update of sample rate to " + rawRate);
                 mAsyncInProgress = true;
                 mRate = rate;
                 mMc = mc;
-                stop();
+                PlaybackState ps = mc.getPlaybackState();
+                stop(ps != null && ps.getPosition() < REWIND_THRESHOLD);
                 connectAsync();
             }
         }
@@ -114,8 +118,10 @@ public class ControlAdapterListener extends AdapterListener {
         }
     }
 
-    private void stop() {
-        pressButton(KeyEvent.KEYCODE_MEDIA_STOP);
+    private void stop(boolean rewind) {
+        pressButton(rewind
+                ? KeyEvent.KEYCODE_MEDIA_STOP
+                : KeyEvent.KEYCODE_MEDIA_PAUSE);
     }
 
     private void play() {

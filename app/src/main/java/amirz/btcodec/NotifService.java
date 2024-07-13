@@ -8,23 +8,27 @@ import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
 import android.service.notification.NotificationListenerService;
 import android.util.Log;
+import android.util.Pair;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import amirz.btcodec.adp.ControlAdapterListener;
 
 public class NotifService extends NotificationListenerService
         implements MediaSessionManager.OnActiveSessionsChangedListener {
 
-    private static final String TAG = "Notif";
+    private static final String TAG = "NotifService";
 
     private ControlAdapterListener mListener;
     private BluetoothConnectReceiver mConnect;
     private ComponentName mComponent;
     private MediaSessionManager mMedia;
+    private String mLog;
 
     private final Map<MediaController, MediaControllerCallback> mCbs = new HashMap<>();
 
@@ -88,25 +92,35 @@ public class NotifService extends NotificationListenerService
         for (MediaController mc : controllers) {
             if (!mCbs.containsKey(mc)) {
                 MediaControllerCallback cb = new MediaControllerCallback(
-                    getApplicationContext(), mc, mListener, this::hasExclusiveMC);
+                    getApplicationContext(), mc, this::onChange);
                 mc.registerCallback(cb);
                 mCbs.put(mc, cb);
             }
         }
     }
 
-    private boolean hasExclusiveMC() {
-        int playing = 0;
+    private void onChange() {
         try {
-            for (MediaController mc : mMedia.getActiveSessions(mComponent)) {
-                PlaybackState state = mc.getPlaybackState();
-                if (MediaControllerCallback.isPlaying(state)) {
-                    playing += 1;
-                }
+            List<Map.Entry<MediaController, MediaControllerCallback>> cbs =
+                    mCbs.entrySet()
+                            .stream()
+                            .filter(cb -> cb.getValue().isPlaying())
+                            .collect(Collectors.toList());
+
+            String log = cbs.stream()
+                    .map(cb -> cb.getKey().getPackageName())
+                    .collect(Collectors.joining(", "));
+            if (!log.equals(mLog)) {
+                Log.d(TAG, "onChange playing: " + log);
+                mLog = log;
+            }
+
+            if (cbs.size() == 1) {
+                Map.Entry<MediaController, MediaControllerCallback> mc = cbs.get(0);
+                mListener.setRate(mc.getValue().getRate(), mc.getKey());
             }
         } catch (SecurityException e) {
             e.printStackTrace();
         }
-        return playing == 1;
     }
 }

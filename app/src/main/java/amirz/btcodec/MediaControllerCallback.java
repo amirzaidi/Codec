@@ -27,17 +27,17 @@ public class MediaControllerCallback extends MediaController.Callback {
 
     private final Context mContext;
     private final MediaController mMc;
-    private final ControlAdapterListener mListener;
-    private final Supplier<Boolean> mIsExclusive;
+    //private final ControlAdapterListener mListener;
+    private final Runnable mOnChange;
 
     private int mRate = RATE_UNKNOWN;
 
     public MediaControllerCallback(Context context, MediaController mc,
-                                   ControlAdapterListener listener, Supplier<Boolean> isExclusive) {
+                                   /* ControlAdapterListener listener, */ Runnable onChange) {
         mContext = context;
         mMc = mc;
-        mListener = listener;
-        mIsExclusive = isExclusive;
+        //mListener = listener;
+        mOnChange = onChange;
     }
 
     @SuppressLint("Range")
@@ -105,10 +105,15 @@ public class MediaControllerCallback extends MediaController.Callback {
 
     @Override
     public void onPlaybackStateChanged(PlaybackState state) {
+        mOnChange.run();
         //Log.d(TAG, "onPlaybackStateChanged " + mMc.getPackageName() + " " + isPlaying(state) + " " + mIsExclusive.get());
-        if (isPlaying(state) /* && mIsExclusive.get() */) {
-            mListener.setRate(mRate, mMc);
-        }
+        //if (isPlaying(state) /* && mIsExclusive.get() */) {
+        //    mListener.setRate(mRate, mMc);
+        //}
+    }
+
+    public int getRate() {
+        return mRate;
     }
 
     private void resetSampleRate() {
@@ -118,6 +123,11 @@ public class MediaControllerCallback extends MediaController.Callback {
     private void changeSampleRate(int rate) {
         Log.d(TAG,  mMc.getPackageName() + " updating sample rate to " + rate);
         mRate = rate;
+        mOnChange.run();
+    }
+
+    public boolean isPlaying() {
+        return isPlaying(mMc.getPlaybackState());
     }
 
     public static boolean isPlaying(PlaybackState state) {
