@@ -5,12 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
-import android.media.session.PlaybackState;
 import android.service.notification.NotificationListenerService;
 import android.util.Log;
-import android.util.Pair;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -95,6 +92,7 @@ public class NotifService extends NotificationListenerService
                     getApplicationContext(), mc, this::onChange);
                 mc.registerCallback(cb);
                 mCbs.put(mc, cb);
+                cb.onMetadataChanged(mc.getMetadata());
             }
         }
     }
@@ -114,10 +112,9 @@ public class NotifService extends NotificationListenerService
                 Log.d(TAG, "onChange playing: " + log);
                 mLog = log;
             }
-
             if (cbs.size() == 1) {
                 Map.Entry<MediaController, MediaControllerCallback> mc = cbs.get(0);
-                mListener.setRate(mc.getValue().getRate(), mc.getKey());
+                mListener.setRate(mc.getValue().getRate(), mc.getValue().getDepth(), mc.getKey());
             }
         } catch (SecurityException e) {
             e.printStackTrace();

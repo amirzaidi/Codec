@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@SuppressLint("InlinedApi")
 public class ControlAdapterListener extends AdapterListener {
     private static final String TAG = "ControlAdapterListener";
 
@@ -24,20 +25,26 @@ public class ControlAdapterListener extends AdapterListener {
 
     private static final int REWIND_THRESHOLD = 5000;
     private static final int RETRY_TIME = 3000;
-    private static final int PLAY_DELAY = 1250;
+    private static final int PLAY_DELAY = 1750;
 
-    private static final Map<Integer, Integer> sRateMap = new HashMap<>();
+    private static final Map<Integer, Integer> RATE_MAP = new HashMap<>();
+    private static final Map<Integer, Integer> DEPTH_MAP = new HashMap<>();
 
     static {
-        sRateMap.put(44100, BluetoothCodecConfig.SAMPLE_RATE_44100);
-        sRateMap.put(48000, BluetoothCodecConfig.SAMPLE_RATE_48000);
-        sRateMap.put(88200, BluetoothCodecConfig.SAMPLE_RATE_88200);
-        sRateMap.put(96000, BluetoothCodecConfig.SAMPLE_RATE_96000);
+        RATE_MAP.put(44100, BluetoothCodecConfig.SAMPLE_RATE_44100);
+        RATE_MAP.put(48000, BluetoothCodecConfig.SAMPLE_RATE_48000);
+        RATE_MAP.put(88200, BluetoothCodecConfig.SAMPLE_RATE_88200);
+        RATE_MAP.put(96000, BluetoothCodecConfig.SAMPLE_RATE_96000);
+
+        DEPTH_MAP.put(16, BluetoothCodecConfig.BITS_PER_SAMPLE_16);
+        DEPTH_MAP.put(24, BluetoothCodecConfig.BITS_PER_SAMPLE_24);
+        DEPTH_MAP.put(32, BluetoothCodecConfig.BITS_PER_SAMPLE_32);
     }
 
     private final Handler mHandler = new Handler(Objects.requireNonNull(Looper.myLooper()));
 
-    private int mRate = -1;
+    private int mRate;
+    private int mDepth;
     private MediaController mMc;
     private boolean mAsyncInProgress;
 
@@ -46,20 +53,24 @@ public class ControlAdapterListener extends AdapterListener {
     }
 
     public void reset() {
-        mRate = -1;
+        mRate = 0;
+        mDepth = 0;
     }
 
+    /** @noinspection DataFlowIssue*/
     // Step 1: Pause, then become the controller of the bluetooth device.
-    public void setRate(int rawRate, MediaController mc) {
-        int rate = sRateMap.getOrDefault(rawRate, BluetoothCodecConfig.SAMPLE_RATE_48000);
-        if (mRate != rate) {
+    public void setRate(int rawRate, int rawDepth, MediaController mc) {
+        int rate = RATE_MAP.getOrDefault(rawRate, BluetoothCodecConfig.SAMPLE_RATE_48000);
+        int depth = DEPTH_MAP.getOrDefault(rawDepth, BluetoothCodecConfig.BITS_PER_SAMPLE_16);
+        if (mRate != rate || mDepth != depth) {
             String pkg = mc.getPackageName();
             if (mAsyncInProgress) {
                 Log.d(TAG, pkg + " request in progress, new request ignored");
             } else {
-                Log.d(TAG,  pkg + " starting update of sample rate to " + rawRate);
+                Log.d(TAG,  pkg + " starting update to (sr=" + rawRate + ", bd=" + rawDepth + ")");
                 mAsyncInProgress = true;
                 mRate = rate;
+                mDepth = depth;
                 mMc = mc;
                 PlaybackState ps = mc.getPlaybackState();
                 stop(ps != null && ps.getPosition() < REWIND_THRESHOLD);
@@ -104,9 +115,10 @@ public class ControlAdapterListener extends AdapterListener {
 
         Log.d(TAG, "OldConfig: " + oldConfig);
         Log.d(TAG, "SetConfig: " + setConfig);
-        a2dp.setCodecConfigPreference(dev, setConfig);
+        HiddenApi.setCodecConfigPreference(a2dp, dev, setConfig);
 
         long stop = System.currentTimeMillis() + RETRY_TIME;
+        //noinspection StatementWithEmptyBody
         while (System.currentTimeMillis() <= stop && !getConfig(a2dp, dev).equals(setConfig)) {
         }
 
@@ -140,7 +152,7 @@ public class ControlAdapterListener extends AdapterListener {
                 .setCodecType(BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC)
                 .setCodecPriority(BluetoothCodecConfig.CODEC_PRIORITY_HIGHEST)
                 .setSampleRate(mRate)
-                .setBitsPerSample(BluetoothCodecConfig.BITS_PER_SAMPLE_24)
+                .setBitsPerSample(mDepth)
                 .setChannelMode(BluetoothCodecConfig.CHANNEL_MODE_STEREO)
                 .setCodecSpecific1(1000) // 1000 = Quality, 1003 = Best Effort
                 .setCodecSpecific2(0) // 0

@@ -15,28 +15,25 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
-
-import amirz.btcodec.adp.ControlAdapterListener;
 
 public class MediaControllerCallback extends MediaController.Callback {
     private static final String TAG = "MediaControllerCallback";
 
-    private static final int RATE_UNKNOWN = -2;
-    private static final int RATE_DEFAULT = -1;
+    private static final String KEY_SAMPLE_RATE = MediaFormat.KEY_SAMPLE_RATE;
+    private static final String KEY_BIT_DEPTH = "bits-per-sample";
+
+    private static final int DEFAULT = -1;
 
     private final Context mContext;
     private final MediaController mMc;
-    //private final ControlAdapterListener mListener;
     private final Runnable mOnChange;
 
-    private int mRate = RATE_UNKNOWN;
+    private int mRate = DEFAULT;
+    private int mDepth = DEFAULT;
 
-    public MediaControllerCallback(Context context, MediaController mc,
-                                   /* ControlAdapterListener listener, */ Runnable onChange) {
+    public MediaControllerCallback(Context context, MediaController mc, Runnable onChange) {
         mContext = context;
         mMc = mc;
-        //mListener = listener;
         mOnChange = onChange;
     }
 
@@ -44,6 +41,10 @@ public class MediaControllerCallback extends MediaController.Callback {
     @Override
     public void onMetadataChanged(MediaMetadata metadata) {
         super.onMetadataChanged(metadata);
+        if (metadata == null) {
+            return;
+        }
+
         CharSequence artist = metadata.getText(MediaMetadata.METADATA_KEY_ARTIST);
         CharSequence title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
         CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM);
@@ -55,9 +56,10 @@ public class MediaControllerCallback extends MediaController.Callback {
         String[] mProjection = {
                 MediaStore.Audio.Media._ID
         };
-        int artistSplit1 = artistString.lastIndexOf(' ');
-        int artistSplit2 = artistString.lastIndexOf(';');
-        int artistSplit = artistSplit1 == -1 ? artistSplit2 : artistSplit1;
+        int artistSplit = artistString.lastIndexOf(' ');
+        if (artistSplit == -1) {
+            artistSplit = artistString.lastIndexOf(';');
+        }
         String[] mArgs = {
                 "%" + titleString + "%",
                 "%" + (artistSplit == -1 || artistSplit == artistString.length() - 1
@@ -76,8 +78,8 @@ public class MediaControllerCallback extends MediaController.Callback {
                 null
         )) {
             if (c == null || c.getCount() == 0) {
-                Log.e(TAG, "onMetadataChanged no results");
-                resetSampleRate();
+                Log.e(TAG, "onMetadataChanged " + mMc.getPackageName() + " no results");
+                changeSampleRate(DEFAULT, DEFAULT);
             } else {
                 List<Uri> uris = new ArrayList<>();
                 while (c.moveToNext()) {
@@ -88,16 +90,17 @@ public class MediaControllerCallback extends MediaController.Callback {
                 }
 
                 if (uris.size() > 1) {
-                    Log.e(TAG, "onMetadataChanged ambiguity " + uris.size());
+                    Log.e(TAG, "onMetadataChanged " + mMc.getPackageName() + " ambiguity " + uris.size());
                 }
 
                 MediaExtractor mex = new MediaExtractor();
                 mex.setDataSource(mContext, uris.get(0), null);
                 MediaFormat mf = mex.getTrackFormat(0);
-                int sampleRate = mf.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                int sampleRate = mf.getInteger(KEY_SAMPLE_RATE, DEFAULT);
+                int bitDepth = mf.getInteger(KEY_BIT_DEPTH, DEFAULT);
 
-                Log.d(TAG, "onMetadataChanged " + uris.get(0) + " " + sampleRate);
-                changeSampleRate(sampleRate);
+                Log.d(TAG, "onMetadataChanged " + mMc.getPackageName() + " " + uris.get(0) + " sr=" + sampleRate + " bd=" + bitDepth);
+                changeSampleRate(sampleRate, bitDepth);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -107,31 +110,25 @@ public class MediaControllerCallback extends MediaController.Callback {
     @Override
     public void onPlaybackStateChanged(PlaybackState state) {
         mOnChange.run();
-        //Log.d(TAG, "onPlaybackStateChanged " + mMc.getPackageName() + " " + isPlaying(state) + " " + mIsExclusive.get());
-        //if (isPlaying(state) /* && mIsExclusive.get() */) {
-        //    mListener.setRate(mRate, mMc);
-        //}
     }
 
     public int getRate() {
         return mRate;
     }
 
-    private void resetSampleRate() {
-        changeSampleRate(RATE_DEFAULT);
+    public int getDepth() {
+        return mDepth;
     }
 
-    private void changeSampleRate(int rate) {
-        Log.d(TAG,  mMc.getPackageName() + " updating sample rate to " + rate);
+    private void changeSampleRate(int rate, int depth) {
         mRate = rate;
+        mDepth = depth;
         mOnChange.run();
     }
 
     public boolean isPlaying() {
-        return isPlaying(mMc.getPlaybackState());
-    }
-
-    public static boolean isPlaying(PlaybackState state) {
-        return state != null && state.getState() == PlaybackState.STATE_PLAYING;
+        PlaybackState state = mMc.getPlaybackState();
+        return state != null
+                && state.getState() == PlaybackState.STATE_PLAYING;
     }
 }

@@ -83,7 +83,8 @@ public abstract class AdapterListener implements BluetoothProfile.ServiceListene
         }
     }
 
+    @SuppressLint("NewApi")
     protected static BluetoothCodecConfig getConfig(BluetoothA2dp a2dp, BluetoothDevice dev) {
-        return a2dp.getCodecStatus(dev).getCodecConfig();
+        return HiddenApi.getCodecStatus(a2dp, dev).getCodecConfig();
     }
 }
