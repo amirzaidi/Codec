@@ -24,8 +24,11 @@ public abstract class AdapterListener implements BluetoothProfile.ServiceListene
         mAdp = context.getSystemService(BluetoothManager.class).getAdapter();
     }
 
-    public void connectAsync() {
-        mAdp.getProfileProxy(mContext, this, BluetoothProfile.A2DP);
+    public boolean connectAsync() {
+        if (mAdp.getState() != BluetoothAdapter.STATE_ON) {
+            return false;
+        }
+        return mAdp.getProfileProxy(mContext, this, BluetoothProfile.A2DP);
     }
 
     @SuppressLint("MissingPermission")

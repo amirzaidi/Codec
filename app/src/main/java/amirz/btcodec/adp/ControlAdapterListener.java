@@ -25,7 +25,8 @@ public class ControlAdapterListener extends AdapterListener {
 
     private static final int REWIND_THRESHOLD = 5000;
     private static final int RETRY_TIME = 3000;
-    private static final int PLAY_DELAY = 1750;
+    private static final int DELAY_RESUME = 2250;
+    private static final int DELAY_RELEASE = 2750;
 
     private static final Map<Integer, Integer> RATE_MAP = new HashMap<>();
     private static final Map<Integer, Integer> DEPTH_MAP = new HashMap<>();
@@ -68,13 +69,16 @@ public class ControlAdapterListener extends AdapterListener {
                 Log.d(TAG, pkg + " request in progress, new request ignored");
             } else {
                 Log.d(TAG,  pkg + " starting update to (sr=" + rawRate + ", bd=" + rawDepth + ")");
-                mAsyncInProgress = true;
                 mRate = rate;
                 mDepth = depth;
                 mMc = mc;
                 PlaybackState ps = mc.getPlaybackState();
-                stop(ps != null && ps.getPosition() < REWIND_THRESHOLD);
-                connectAsync();
+                if (connectAsync()) {
+                    mAsyncInProgress = true;
+                    stop(ps != null && ps.getPosition() < REWIND_THRESHOLD);
+                } else {
+                    Log.d(TAG,  pkg + " connect async failed");
+                }
             }
         }
     }
@@ -85,13 +89,16 @@ public class ControlAdapterListener extends AdapterListener {
         updateConfig(a2dp, dev);
     }
 
+    // Step 3: Resume playback.
     @Override
     protected void onDisconnected() {
-        mHandler.postDelayed(this::onAsyncComplete, PLAY_DELAY);
+        mHandler.postDelayed(this::play, DELAY_RESUME);
+        mHandler.postDelayed(this::onAsyncComplete, DELAY_RELEASE);
     }
 
-    // Step 3: Resume, and give up control.
+    // Step 4: Give up control.
     private void onAsyncComplete() {
+        // Call play again in case there was a delay.
         play();
         mAsyncInProgress = false;
     }
