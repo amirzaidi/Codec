@@ -127,7 +127,14 @@ public class MediaControllerCallback extends MediaController.Callback {
     }
 
     public boolean isPlaying() {
-        PlaybackState state = mMc.getPlaybackState();
+        return isPlaying(mMc);
+    }
+
+    public static boolean isPlaying(MediaController mc) {
+        if (mc == null) {
+            return false;
+        }
+        PlaybackState state = mc.getPlaybackState();
         return state != null
                 && state.getState() == PlaybackState.STATE_PLAYING;
     }

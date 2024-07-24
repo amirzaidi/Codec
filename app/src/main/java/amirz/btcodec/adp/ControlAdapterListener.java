@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import amirz.btcodec.MediaControllerCallback;
+
 @SuppressLint("InlinedApi")
 public class ControlAdapterListener extends AdapterListener {
     private static final String TAG = "ControlAdapterListener";
@@ -144,7 +146,9 @@ public class ControlAdapterListener extends AdapterListener {
     }
 
     private void play() {
-        pressButton(KeyEvent.KEYCODE_MEDIA_PLAY);
+        if (!MediaControllerCallback.isPlaying(mMc)) {
+            pressButton(KeyEvent.KEYCODE_MEDIA_PLAY);
+        }
     }
 
     private void pressButton(int keyCode) {
