@@ -45,8 +45,24 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+
+        IntentFilter f = new IntentFilter();
+        f.addAction(ControlAdapterListener.UPDATE_INTENT);
+        registerReceiver(mReceiver, f, RECEIVER_NOT_EXPORTED);
+        mReceiverRegistered = true;
+
+        if (mListener.isConnected()) {
+            return;
+        }
+
         setText(R.string.permissions_needed);
 
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
@@ -80,11 +96,6 @@ public class MainActivity extends Activity {
             } else {
                 setText(R.string.permissions_granted);
                 mListener.connectAsync();
-
-                IntentFilter f = new IntentFilter();
-                f.addAction(ControlAdapterListener.UPDATE_INTENT);
-                registerReceiver(mReceiver, f, RECEIVER_NOT_EXPORTED);
-                mReceiverRegistered = true;
             }
         }
     }
@@ -92,6 +103,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+
         if (mReceiverRegistered) {
             unregisterReceiver(mReceiver);
             mReceiverRegistered = false;

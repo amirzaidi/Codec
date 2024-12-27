@@ -18,23 +18,33 @@ public abstract class AdapterListener implements BluetoothProfile.ServiceListene
 
     protected final Context mContext;
     private final BluetoothAdapter mAdp;
+    private boolean mConnected;
 
     public AdapterListener(Context context) {
         mContext = context;
         mAdp = context.getSystemService(BluetoothManager.class).getAdapter();
     }
 
+    public boolean canConnect() {
+        return mAdp.getState() == BluetoothAdapter.STATE_ON;
+    }
+
     public boolean connectAsync() {
-        if (mAdp.getState() != BluetoothAdapter.STATE_ON) {
-            return false;
+        if (canConnect()) {
+            return mAdp.getProfileProxy(mContext, this, BluetoothProfile.A2DP);
         }
-        return mAdp.getProfileProxy(mContext, this, BluetoothProfile.A2DP);
+        return false;
+    }
+
+    public boolean isConnected() {
+        return mConnected;
     }
 
     @SuppressLint("MissingPermission")
     @Override
     public void onServiceConnected(int profile, BluetoothProfile proxy) {
         Log.e(TAG, "onServiceConnected");
+        mConnected = true;
         BluetoothA2dp a2dp = (BluetoothA2dp) proxy;
 
         List<BluetoothDevice> devs = a2dp.getConnectedDevices();
@@ -48,7 +58,7 @@ public abstract class AdapterListener implements BluetoothProfile.ServiceListene
             onConnected(a2dp, devs.get(0));
         }
 
-        mAdp.closeProfileProxy(BluetoothProfile.A2DP, proxy);
+        //mAdp.closeProfileProxy(BluetoothProfile.A2DP, proxy);
     }
 
     protected abstract void onConnected(BluetoothA2dp a2dp, BluetoothDevice dev);
@@ -56,6 +66,7 @@ public abstract class AdapterListener implements BluetoothProfile.ServiceListene
     @Override
     public void onServiceDisconnected(int profile) {
         Log.e(TAG,"onServiceDisconnected");
+        mConnected = false;
         onDisconnected();
     }
 

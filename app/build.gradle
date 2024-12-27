@@ -8,8 +8,8 @@ android {
 
     defaultConfig {
         applicationId "amirz.btcodec"
-        minSdk 32
-        targetSdk 32
+        minSdk 33
+        targetSdk 35
         versionCode 1
         versionName "1.0"
 
@@ -30,7 +30,7 @@ android {
 
 dependencies {
 
-    compileOnly files("${rootDir}/prebuilts/android-33.jar") // Just to look at sources.
+    compileOnly files("${rootDir}/prebuilts/android-35.jar") // Just to look at sources.
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
